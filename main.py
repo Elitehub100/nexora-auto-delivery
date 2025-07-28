@@ -1,6 +1,7 @@
 from flask import Flask, request
 from telegram import Bot, Update
 from telegram.ext import Dispatcher, CommandHandler, MessageHandler, Filters
+import os
 
 TOKEN = "8440109945:AAH4xiOzPE8M-seLUPUofgPvIuRJBcHjGJM"
 bot = Bot(token=TOKEN)
@@ -27,4 +28,5 @@ dispatcher.add_handler(CommandHandler("start", start))
 dispatcher.add_handler(CommandHandler("help", help_command))
 
 if __name__ == "__main__":
-    app.run(port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
