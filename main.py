@@ -1,32 +1,30 @@
 from flask import Flask, request
-from telegram import Bot, Update
-from telegram.ext import Dispatcher, CommandHandler, MessageHandler, Filters
-import os
+import requests
 
-TOKEN = "8440109945:AAHsyuMmbKwD7lFOez9Fe86Zwjxzr0azCvo"
-bot = Bot(token=TOKEN)
 app = Flask(__name__)
 
-@app.route('/')
-def home():
-    return "Bot is running!"
+# ✅ Your Telegram bot token (already replaced)
+TOKEN = "8440109945:AAHsyuMmbKwD7lFOez9Fe86Zwjxzr0azCvo"
+TELEGRAM_API = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
 
-@app.route(f"/{TOKEN}", methods=["POST"])
+@app.route("/webhook", methods=["POST"])
 def webhook():
-    update = Update.de_json(request.get_json(force=True), bot)
-    dispatcher.process_update(update)
-    return "ok"
+    data = request.get_json()
 
-def start(update, context):
-    update.message.reply_text("👋 Welcome to Nexora Auto Bot!")
+    if "message" in data:
+        chat_id = data["message"]["chat"]["id"]
+        text = data["message"].get("text", "")
 
-def help_command(update, context):
-    update.message.reply_text("💡 Send a product code to get your digital product.")
+        # Auto-reply logic
+        reply = f"✅ You said: {text}"
+        requests.post(TELEGRAM_API, json={
+            "chat_id": chat_id,
+            "text": reply
+        })
 
-dispatcher = Dispatcher(bot, None, workers=0, use_context=True)
-dispatcher.add_handler(CommandHandler("start", start))
-dispatcher.add_handler(CommandHandler("help", help_command))
+    return {"ok": True}
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))  # Get PORT env variable or default 5000
-    app.run(host="0.0.0.0", port=port)        # Bind to all interfaces (0.0.0.0)
+    import os
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
