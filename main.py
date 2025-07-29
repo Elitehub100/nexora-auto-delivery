@@ -1,35 +1,33 @@
 from flask import Flask, request
-from telegram import Bot, Update
-from telegram.ext import Dispatcher, CommandHandler, CallbackContext
+import requests
+import json
 
 app = Flask(__name__)
 
-# Your bot token
-BOT_TOKEN = "8440109945:AAHsyuMmbKwD7lFOez9Fe86Zwjxzr0azCvo"
+BOT_TOKEN = '8440109945:AAHsyuMmbKwD7lFOez9Fe86Zwjxzr0azCvo'
+TELEGRAM_API = f'https://api.telegram.org/bot{BOT_TOKEN}/sendMessage'
 
-# Initialize bot and dispatcher
-bot = Bot(token=BOT_TOKEN)
-dispatcher = Dispatcher(bot=bot, update_queue=None, workers=1)
+@app.route(f'/{BOT_TOKEN}', methods=["POST"])
+def webhook():
+    update = request.get_json()
 
-# Command: /start
-def start(update: Update, context: CallbackContext):
-    update.message.reply_text("✅ Hello! Nexora Auto Bot is working successfully.")
+    if "message" in update:
+        message = update["message"]
+        chat_id = message["chat"]["id"]
+        text = message.get("text", "")
 
-# Register the command handler
-dispatcher.add_handler(CommandHandler("start", start))
+        if text == "/start":
+            reply_text = "✅ Hello! Nexora Auto Bot is working successfully."
+            send_message(chat_id, reply_text)
 
-# Webhook endpoint
-@app.route(f"/{BOT_TOKEN}", methods=["POST"])
-def handle_webhook():
-    if request.method == "POST":
-        update = Update.de_json(request.get_json(force=True), bot)
-        dispatcher.process_update(update)
-        return "Webhook received!", 200
+    return {"ok": True}
 
-# Health check endpoint
-@app.route("/", methods=["GET"])
-def health_check():
-    return "🚀 Nexora Auto Delivery Bot is running on Render!", 200
+def send_message(chat_id, text):
+    payload = {
+        "chat_id": chat_id,
+        "text": text
+    }
+    requests.post(TELEGRAM_API, json=payload)
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+if __name__ == '__main__':
+    app.run()
