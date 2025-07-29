@@ -1,34 +1,70 @@
-import os
-from flask import Flask, request
+from flask import Flask, request, send_file
 import requests
+import os
 
 app = Flask(__name__)
 
-BOT_TOKEN = '8440109945:AAHsyuMmbKwD7lFOez9Fe86Zwjxzr0azCvo'
-TELEGRAM_API = f'https://api.telegram.org/bot{BOT_TOKEN}/sendMessage'
+TELEGRAM_TOKEN = "8440109945:AAHsyuMmbKwD7lFOez9Fe86Zwjxzr0azCvo"
+TELEGRAM_API = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}"
 
-@app.route(f'/{BOT_TOKEN}', methods=["POST"])
+# Prevents duplicate responses
+last_update_id = None
+
+@app.route("/")
+def home():
+    return "✅ Nexora Auto Bot is Live!"
+
+@app.route(f"/{TELEGRAM_TOKEN}", methods=["POST"])
 def webhook():
-    update = request.get_json()
+    global last_update_id
+    data = request.get_json()
 
-    if "message" in update:
-        message = update["message"]
-        chat_id = message["chat"]["id"]
-        text = message.get("text", "")
+    if not data:
+        return "No data", 400
+
+    update_id = data.get("update_id")
+    if update_id == last_update_id:
+        return "Duplicate update", 200
+    last_update_id = update_id
+
+    if "message" in data:
+        chat_id = data["message"]["chat"]["id"]
+        text = data["message"].get("text", "")
 
         if text == "/start":
-            reply_text = "✅ Hello! Nexora Auto Bot is working successfully."
-            send_message(chat_id, reply_text)
+            send_message(chat_id, "👋 Welcome to Nexora Auto Bot!\nUse /help to see commands.")
+        elif text == "/help":
+            send_message(chat_id, "📘 *Available Commands:*\n/start – Start the bot\n/help – Show help\n/status – Check bot status\n/download – Get EliteToolkit.zip", parse_mode="Markdown")
+        elif text == "/status":
+            send_message(chat_id, "✅ Bot is running and active!")
+        elif text == "/download":
+            send_document(chat_id, "EliteToolkit.zip", "EliteToolkit.zip")
+        else:
+            send_message(chat_id, "❓ Unknown command. Use /help for available options.")
 
-    return {"ok": True}
+    return "OK", 200
 
-def send_message(chat_id, text):
+def send_message(chat_id, text, parse_mode=None):
     payload = {
         "chat_id": chat_id,
         "text": text
     }
-    requests.post(TELEGRAM_API, json=payload)
+    if parse_mode:
+        payload["parse_mode"] = parse_mode
+    requests.post(f"{TELEGRAM_API}/sendMessage", json=payload)
 
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))  # Use Render's PORT if available
-    app.run(host='0.0.0.0', port=port)
+def send_document(chat_id, filename, caption=None):
+    try:
+        with open(filename, 'rb') as file:
+            files = {'document': (filename, file)}
+            data = {
+                "chat_id": chat_id,
+                "caption": caption or filename
+            }
+            requests.post(f"{TELEGRAM_API}/sendDocument", data=data, files=files)
+    except FileNotFoundError:
+        send_message(chat_id, "❌ File not found: EliteToolkit.zip")
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
