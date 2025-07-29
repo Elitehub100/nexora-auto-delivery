@@ -1,35 +1,44 @@
-from flask import Flask, request
-import requests
 import os
+from flask import Flask, request, jsonify
+from telegram import Bot
+from threading import Lock
 
 app = Flask(__name__)
 
-BOT_TOKEN = "8440109945:AAHsyuMmbKwD7lFOez9Fe86Zwjxzr0azCvo"
-API_URL = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+# Your Telegram bot token and chat ID
+bot_token = '8440109945:AAHsyuMmbKwD7lFOez9Fe86Zwjxzr0azCvo'
+chat_id = '5468345098'
 
-@app.route(f"/{BOT_TOKEN}", methods=["POST"])
-def receive_update():
+bot = Bot(token=bot_token)
+sent_ids = set()
+lock = Lock()
+
+@app.route("/", methods=["POST"])
+def handle_delivery():
     data = request.get_json()
 
-    if "message" in data:
-        chat_id = data["message"]["chat"]["id"]
-        message_text = data["message"].get("text", "")
+    if not data or "id" not in data or "file" not in data:
+        return jsonify({"error": "Missing required fields"}), 400
 
-        if message_text.lower() == "/start":
-            send_message(chat_id, "✅ Hello! Nexora Auto Bot is working successfully.")
+    delivery_id = data["id"]
+    file_name = data["file"]
+
+    with lock:
+        if delivery_id in sent_ids:
+            message = f"⚠️ Duplicate Delivery Detected!\nDelivery ID: `{delivery_id}`\nFile: `{file_name}`"
         else:
-            send_message(chat_id, f"✅ Received: {message_text}")
+            sent_ids.add(delivery_id)
+            message = f"✅ New Digital File Delivered!\n📦 File: `{file_name}`\n🆔 Delivery ID: `{delivery_id}`"
 
-    return {"ok": True}
+    try:
+        bot.send_message(chat_id=chat_id, text=message, parse_mode='Markdown')
+        return jsonify({"status": "Message sent"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-def send_message(chat_id, text):
-    payload = {
-        "chat_id": chat_id,
-        "text": text
-    }
-    requests.post(API_URL, json=payload)
+@app.route("/", methods=["GET"])
+def health():
+    return "OK", 200
 
-# ✅ Fix for Render Deployment: bind to 0.0.0.0 and dynamic port
-if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port, debug=False)
+if __name__ == "__main__":
+    app.run(debug=False, port=10000, host="0.0.0.0")
