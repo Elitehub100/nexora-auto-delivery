@@ -4,33 +4,37 @@ from telegram.ext import Dispatcher, CommandHandler, CallbackContext
 
 app = Flask(__name__)
 
-# Your updated Telegram bot token
 BOT_TOKEN = "8440109945:AAHsyuMmbKwD7lFOez9Fe86Zwjxzr0azCvo"
-
 bot = Bot(token=BOT_TOKEN)
 dispatcher = Dispatcher(bot=bot, update_queue=None, workers=1)
 
-# /start command handler (single response)
-def start(update: Update, context: CallbackContext):
-    # To avoid duplicates, check for text and first-time
-    if update.message and update.message.text:
-        update.message.reply_text("✅ Hello! Nexora Auto Bot is working successfully.")
+# Your Shoppy product URL
+SHOPPY_PRODUCT_URL = "https://shoppy.gg/product/Lz1YHRj"
 
+# /start command handler
+def start(update: Update, context: CallbackContext):
+    welcome_msg = (
+        "✅ Welcome to Nexora Auto Bot!\n\n"
+        f"🛒 Buy the toolkit here: {SHOPPY_PRODUCT_URL}\n"
+        "📦 After payment, your file will be delivered instantly.\n\n"
+        "💬 Need help? Message @Nimona111"
+    )
+    update.message.reply_text(welcome_msg)
+
+# Register handler
 dispatcher.add_handler(CommandHandler("start", start))
 
-# Telegram webhook handler
+# Webhook route
 @app.route(f"/{BOT_TOKEN}", methods=["POST"])
-def handle_webhook():
-    data = request.get_json(force=True)
-    update = Update.de_json(data, bot)
+def webhook():
+    update = Update.de_json(request.get_json(force=True), bot)
     dispatcher.process_update(update)
-    return "OK", 200
+    return "ok", 200
 
-# Health-check endpoint for Render
+# Health check route
 @app.route("/", methods=["GET"])
 def health_check():
-    return "🚀 Nexora Auto Delivery Bot is running.", 200
+    return "🚀 Nexora Auto Delivery Bot is running!", 200
 
 if __name__ == "__main__":
-    # Bind to all interfaces and port 10000
     app.run(host="0.0.0.0", port=10000)
