@@ -4,28 +4,29 @@ from telegram.ext import Dispatcher, CommandHandler, CallbackContext
 
 app = Flask(__name__)
 
-# Telegram Bot Token (working one)
+# Your bot token
 BOT_TOKEN = "8440109945:AAHsyuMmbKwD7lFOez9Fe86Zwjxzr0azCvo"
 
 # Initialize bot and dispatcher
 bot = Bot(token=BOT_TOKEN)
 dispatcher = Dispatcher(bot=bot, update_queue=None, workers=1)
 
-# /start command
+# Command: /start
 def start(update: Update, context: CallbackContext):
     update.message.reply_text("✅ Hello! Nexora Auto Bot is working successfully.")
 
-# Register command
+# Register the command handler
 dispatcher.add_handler(CommandHandler("start", start))
 
 # Webhook endpoint
 @app.route(f"/{BOT_TOKEN}", methods=["POST"])
 def handle_webhook():
-    update = Update.de_json(request.get_json(force=True), bot)
-    dispatcher.process_update(update)
-    return "Webhook received!", 200
+    if request.method == "POST":
+        update = Update.de_json(request.get_json(force=True), bot)
+        dispatcher.process_update(update)
+        return "Webhook received!", 200
 
-# Health check
+# Health check endpoint
 @app.route("/", methods=["GET"])
 def health_check():
     return "🚀 Nexora Auto Delivery Bot is running on Render!", 200
