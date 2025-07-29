@@ -1,6 +1,6 @@
+import os
 from flask import Flask, request
 import requests
-import json
 
 app = Flask(__name__)
 
@@ -30,4 +30,5 @@ def send_message(chat_id, text):
     requests.post(TELEGRAM_API, json=payload)
 
 if __name__ == '__main__':
-    app.run()
+    port = int(os.environ.get('PORT', 5000))  # Use Render's PORT
+    app.run(host='0.0.0.0', port=port)
